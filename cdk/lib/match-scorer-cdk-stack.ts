@@ -1,0 +1,145 @@
+import * as cdk from 'aws-cdk-lib';
+import * as logs from 'aws-cdk-lib/aws-logs';
+import { Construct } from 'constructs';
+import * as path from 'path';
+import * as ssm from 'aws-cdk-lib/aws-ssm';
+
+// Import the new constructs
+import { VpcConstruct } from './vpc-construct';
+import { MskConstruct } from './msk-construct';
+import { EcsConstruct } from './ecs-construct';
+import { SubmissionWatcherLambdaConstruct, TestDataSenderLambdaConstruct } from './lambda-constructs';
+
+// Import the configuration
+import { config, devChallengeId, devScorers } from './config';
+
+export class MatchScorerCdkStack extends cdk.Stack {
+  constructor(scope: Construct, id: string, props?: cdk.StackProps) {
+    super(scope, id, props);
+
+    // --- Base Infrastructure ---
+    const vpcConstruct = new VpcConstruct(this, 'VpcConstruct');
+    
+    const logGroup = new logs.LogGroup(this, 'MatchScorerLogGroup', {
+      logGroupName: config.logGroupName,
+      retention: logs.RetentionDays.ONE_MONTH,
+      removalPolicy: cdk.RemovalPolicy.DESTROY, // For POC only
+    });
+
+    // --- MSK Construct ---
+    const mskConstruct = new MskConstruct(this, 'MskConstruct', {
+      vpc: vpcConstruct.vpc,
+      clusterName: config.mskClusterName,
+    });
+
+    // --- ECS Construct ---
+    const ecsConstruct = new EcsConstruct(this, 'EcsConstruct', {
+        vpc: vpcConstruct.vpc,
+        logGroup: logGroup,
+        clusterName: config.ecsClusterName,
+        dockerImagePath: path.join(__dirname, '..', '..', 'java-scorer'),
+        containerEnvironment: {
+            AWS_REGION: cdk.Stack.of(this).region,
+        }
+    });
+
+    // --- Lambda Constructs ---
+    const submissionWatcherLambda = new SubmissionWatcherLambdaConstruct(this, 'SubmissionWatcherLambda', {
+        vpc: vpcConstruct.vpc,
+        mskClusterArn: mskConstruct.mskCluster.attrArn,
+        mskSecurityGroup: mskConstruct.mskSecurityGroup,
+        ecsClusterName: ecsConstruct.cluster.clusterName,
+        ecsTaskDefinitionArn: ecsConstruct.taskDefinition.taskDefinitionArn,
+        ecsSubnetIds: vpcConstruct.vpc.publicSubnets.map(subnet => subnet.subnetId),
+        ecsTaskSecurityGroupId: ecsConstruct.taskSecurityGroup.securityGroupId,
+        ecsContainerName: ecsConstruct.container.containerName,
+        taskExecutionRoleArn: ecsConstruct.taskExecutionRole.roleArn,
+        taskRoleArn: ecsConstruct.taskRole.roleArn,
+        environmentVariables: {
+            TASK_TIMEOUT_SECONDS: config.taskTimeoutSeconds,
+            MAX_RETRIES: config.maxRetries,
+            AUTH0_URL: config.auth0Url,
+            AUTH0_AUDIENCE: config.auth0Audience,
+            AUTH0_CLIENT_ID: config.auth0ClientId,
+            AUTH0_CLIENT_SECRET: config.auth0ClientSecret,
+            AUTH0_PROXY_URL: config.auth0ProxyUrl,
+        },
+        lambdaCodePath: path.join(__dirname, '..', '..', 'submission-watcher-lambda')
+    });
+
+    const testDataSenderLambda = new TestDataSenderLambdaConstruct(this, 'TestDataSenderLambda', {
+        vpc: vpcConstruct.vpc,
+        mskClusterArn: mskConstruct.mskCluster.attrArn,
+        mskSecurityGroup: mskConstruct.mskSecurityGroup,
+        environmentVariables: {
+             MSK_CLUSTER_ARN: mskConstruct.mskCluster.attrArn,
+             TARGET_TOPIC: 'submission.notification.create'
+        },
+        lambdaCodePath: path.join(__dirname, '..', '..', 'test-data-sender-lambda')
+    });
+
+    // --- Outputs (Referencing construct properties) ---
+    new cdk.CfnOutput(this, 'EcsClusterArn', {
+      value: ecsConstruct.cluster.clusterArn,
+      description: 'ARN of the ECS cluster',
+    });
+
+    new cdk.CfnOutput(this, 'EcsTaskDefinitionArn', {
+      value: ecsConstruct.taskDefinition.taskDefinitionArn,
+      description: 'ARN of the ECS task definition',
+    });
+
+    new cdk.CfnOutput(this, 'WatcherLambdaFunctionArn', {
+      value: submissionWatcherLambda.lambdaFunction.functionArn,
+      description: 'ARN of the Submission Watcher Lambda function',
+    });
+
+    new cdk.CfnOutput(this, 'EcrRepositoryUri', {
+      value: ecsConstruct.dockerImage.repository.repositoryUri,
+      description: 'URI of the ECR repository',
+    });
+
+    new cdk.CfnOutput(this, 'MskClusterArnOutput', {
+      value: mskConstruct.mskCluster.attrArn,
+      description: 'ARN of the MSK cluster',
+    });
+
+    new cdk.CfnOutput(this, 'PublisherLambdaFunctionName', {
+      value: testDataSenderLambda.lambdaFunction.functionName,
+      description: 'Name of the Test Data Sender Lambda function',
+    });
+
+    // --- Parameter Store Setup for Dev Challenge ---
+    // Challenge config
+    new ssm.CfnParameter(this, 'DevChallengeConfig', {
+      name: `/scorer/challenges/${devChallengeId}/config`,
+      type: 'String',
+      value: JSON.stringify({
+        name: 'Marathon Match 160',
+        active: true,
+        scorers: devScorers.map(scorer => scorer.name),
+        submissionApiUrl: config.submissionApiUrl,
+        reviewScorecardId: config.reviewScorecardId,
+        reviewTypeName: config.reviewTypeName
+      }),
+    });
+
+    // Scorer configs
+    devScorers.forEach((scorer) => {
+      new ssm.CfnParameter(this, `DevScorerConfig${scorer.name}`, {
+        name: `/scorer/challenges/${devChallengeId}/scorers/${scorer.name}/config`,
+        type: 'String',
+        value: JSON.stringify({
+          name: scorer.name,
+          testerClass: scorer.testerClass,
+          timeLimit: scorer.timeLimit,
+          timeout: scorer.timeout,
+          compileTimeout: scorer.compileTimeout,
+          startSeed: scorer.startSeed,
+          numberOfTests: scorer.numberOfTests,
+          phases: scorer.phases
+        }),
+      });
+    });
+  }
+} 
