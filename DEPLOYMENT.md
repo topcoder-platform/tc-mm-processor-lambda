@@ -274,7 +274,7 @@ export AUTH0_PROXY_URL="https://auth0proxy.topcoder-dev.com/token"
 
 ```bash
 # API Configuration
-export SUBMISSION_API_URL="https://api.topcoder-dev.com/v5"
+export SUBMISSION_API_URL="https://api.topcoder-dev.com/v6"
 export REVIEW_SCORECARD_ID="30001852"
 export REVIEW_TYPE_NAME="MMScorer"
 
@@ -297,14 +297,14 @@ For **development**:
 ```bash
 export AUTH0_CLIENT_ID="nMg1e9r7Cnrsw4Zf2zrfM8lvhttFHBmR"
 export AUTH0_CLIENT_SECRET="<dev-secret>"
-export SUBMISSION_API_URL="https://api.topcoder-dev.com/v5"
+export SUBMISSION_API_URL="https://api.topcoder-dev.com/v6"
 ```
 
 For **production**:
 ```bash
 export AUTH0_CLIENT_ID="<prod-client-id>"
 export AUTH0_CLIENT_SECRET="<prod-secret>"
-export SUBMISSION_API_URL="https://api.topcoder.com/v5"
+export SUBMISSION_API_URL="https://api.topcoder.com/v6"
 export LOG_LEVEL="info"
 ```
 
@@ -940,7 +940,7 @@ aws ssm put-parameter \
     "name": "Marathon Match 161",
     "active": true,
     "scorers": ["NewScorer"],
-    "submissionApiUrl": "https://api.topcoder-dev.com/v5",
+    "submissionApiUrl": "https://api.topcoder-dev.com/v6",
     "reviewScorecardId": "30001852",
     "reviewTypeName": "MMScorer"
   }' \

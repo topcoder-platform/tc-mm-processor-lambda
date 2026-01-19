@@ -165,7 +165,7 @@ Configuration for each challenge and scorer is stored in AWS SSM Parameter Store
        "name": "Marathon Match 160",
        "active": true,
        "scorers": ["BioSlime"],
-       "submissionApiUrl": "https://api.topcoder-dev.com/v5",
+       "submissionApiUrl": "https://api.topcoder-dev.com/v6",
        "reviewScorecardId": "30001852",
        "reviewTypeName": "MMScorer"
      }
@@ -301,7 +301,7 @@ The following configuration variables are available:
 
 | Environment Variable   | Description                                                      | Default Value                  |
 |------------------------|------------------------------------------------------------------|--------------------------------|
-| `SUBMISSION_API_URL`   | Base URL for the Topcoder Submission API.                        | `https://api.topcoder-dev.com/v5` |
+| `SUBMISSION_API_URL`   | Base URL for the Topcoder Submission API.                        | `https://api.topcoder-dev.com/v6` |
 | `REVIEW_SCORECARD_ID`  | The Scorecard ID to use when creating reviews via the API.      | `30001852`                     |
 | `REVIEW_TYPE_NAME`     | The Review Type name to use when creating reviews.             | `MMScorer`                     |
 | `LOG_LEVEL`            | Log level for the Scorer ECS task application.                   | `debug`                        |
@@ -360,4 +360,4 @@ npm run destroy
 Use the following command to manually query submissions. It requires a valid bearer token. In this system, tokens are fetched by the Lambda via Auth0 M2M and passed to the ECS task at runtime. For manual testing, obtain a token via your Auth0 proxy.
 
 ```
-curl 'https://api.topcoder-dev.com/v5/submissions?challengeId=30096756' -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:137.0) Gecko/20100101 Firefox/137.0' -H 'Accept: application/json, text/plain, */*' -H 'Accept-Language: en-US,en;q=0.5' -H 'Accept-Encoding: gzip, deflate, br, zstd' -H 'Authorization: Bearer ACCESS_TOKEN'
+curl 'https://api.topcoder-dev.com/v6/submissions?challengeId=30096756' -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:137.0) Gecko/20100101 Firefox/137.0' -H 'Accept: application/json, text/plain, */*' -H 'Accept-Language: en-US,en;q=0.5' -H 'Accept-Encoding: gzip, deflate, br, zstd' -H 'Authorization: Bearer ACCESS_TOKEN'

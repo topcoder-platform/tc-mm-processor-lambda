@@ -26,7 +26,7 @@ export interface AppConfig {
 // Function to load configuration from environment variables and file
 function loadConfig(): AppConfig {
   return {
-    submissionApiUrl: process.env.SUBMISSION_API_URL || 'https://api.topcoder-dev.com/v5',
+    submissionApiUrl: process.env.SUBMISSION_API_URL || 'https://api.topcoder-dev.com/v6',
     reviewScorecardId: process.env.REVIEW_SCORECARD_ID || '30001852',
     reviewTypeName: process.env.REVIEW_TYPE_NAME || 'MMScorer',
     logLevel: process.env.LOG_LEVEL || 'debug',

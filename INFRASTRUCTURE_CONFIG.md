@@ -352,7 +352,7 @@ If not tagged, CDK's `Vpc.fromLookup()` may not find them correctly.
 | `LOG_GROUP_NAME` | No | `/ecs/match-scorer` | CloudWatch log group name |
 | `TASK_TIMEOUT_SECONDS` | No | `60` | ECS task timeout |
 | `MAX_RETRIES` | No | `3` | Max retries for failed tasks |
-| `SUBMISSION_API_URL` | No | `https://api.topcoder-dev.com/v5` | Topcoder API URL |
+| `SUBMISSION_API_URL` | No | `https://api.topcoder-dev.com/v6` | Topcoder API URL |
 | `REVIEW_SCORECARD_ID` | No | `30001852` | Review scorecard ID |
 | `REVIEW_TYPE_NAME` | No | `MMScorer` | Review type name |
 | `LOG_LEVEL` | No | `debug` | Log level (debug, info, warn, error) |
