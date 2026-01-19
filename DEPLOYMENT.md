@@ -201,6 +201,8 @@ aws cloudformation describe-stacks \
 
 ## Configuration
 
+> 📖 **For detailed infrastructure configuration (existing MSK/VPC vs new), see [INFRASTRUCTURE_CONFIG.md](INFRASTRUCTURE_CONFIG.md)**
+
 ### 1. Clone and Navigate to Project
 
 ```bash
@@ -225,6 +227,35 @@ cd ../cdk
 ### 3. Configure Environment Variables
 
 The application uses environment variables for runtime configuration. You can set these in your shell or create a `.env` file.
+
+#### Infrastructure Configuration (MSK & VPC)
+
+**Using Existing Infrastructure** (Recommended if you already have MSK and VPC):
+
+```bash
+# Use existing MSK cluster (required)
+export EXISTING_MSK_CLUSTER_ARN="arn:aws:kafka:us-east-1:123456789012:cluster/your-msk-cluster/uuid"
+
+# Use existing VPC (required)
+export EXISTING_VPC_ID="vpc-0123456789abcdef0"
+```
+
+**⚠️ Important Notes:**
+- If you set `EXISTING_MSK_CLUSTER_ARN`, the stack will **NOT** create a new MSK cluster
+- If you set `EXISTING_VPC_ID`, the stack will **NOT** create a new VPC
+- Make sure the VPC has both public and private subnets
+- The MSK cluster must be in the same VPC or accessible from it
+- The MSK security group must allow connections from Lambda and ECS
+
+**Creating New Infrastructure** (if you don't have MSK and VPC):
+
+If you don't set these environment variables, CDK will create new MSK cluster and VPC automatically:
+
+```bash
+# Optional: Customize names for new resources
+export MSK_CLUSTER_NAME="match-scorer"
+export VPC_NAME="match-scorer-vpc"  # Currently not configurable, will use default
+```
 
 #### Required Variables
 

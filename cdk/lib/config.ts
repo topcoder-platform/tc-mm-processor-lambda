@@ -15,6 +15,12 @@ export interface AppConfig {
   auth0ClientId: string;
   auth0ClientSecret: string;
   auth0ProxyUrl: string;
+  // Existing infrastructure (optional)
+  existingMskClusterArn?: string;
+  existingVpcId?: string;
+  existingPublicSubnetIds?: string;  // Comma-separated subnet IDs
+  existingPrivateSubnetIds?: string; // Comma-separated subnet IDs
+  existingSecurityGroupIds?: string; // Comma-separated security group IDs
 }
 
 // Function to load configuration from environment variables and file
@@ -35,6 +41,12 @@ function loadConfig(): AppConfig {
     auth0ClientId: process.env.AUTH0_CLIENT_ID || '',
     auth0ClientSecret: process.env.AUTH0_CLIENT_SECRET || '',
     auth0ProxyUrl: process.env.AUTH0_PROXY_URL || 'https://auth0proxy.topcoder-dev.com/token',
+    // Existing infrastructure (optional)
+    existingMskClusterArn: process.env.EXISTING_MSK_CLUSTER_ARN || '',
+    existingVpcId: process.env.EXISTING_VPC_ID || '',
+    existingPublicSubnetIds: process.env.EXISTING_PUBLIC_SUBNET_IDS || '',
+    existingPrivateSubnetIds: process.env.EXISTING_PRIVATE_SUBNET_IDS || '',
+    existingSecurityGroupIds: process.env.EXISTING_SECURITY_GROUP_IDS || '',
   };
 }
 

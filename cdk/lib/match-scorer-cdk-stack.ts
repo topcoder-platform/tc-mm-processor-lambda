@@ -18,7 +18,13 @@ export class MatchScorerCdkStack extends cdk.Stack {
     super(scope, id, props);
 
     // --- Base Infrastructure ---
-    const vpcConstruct = new VpcConstruct(this, 'VpcConstruct');
+    // VPC: Use existing or create new
+    const vpcConstruct = new VpcConstruct(this, 'VpcConstruct', {
+      existingVpcId: config.existingVpcId,
+      existingPublicSubnetIds: config.existingPublicSubnetIds,
+      existingPrivateSubnetIds: config.existingPrivateSubnetIds,
+      existingSecurityGroupIds: config.existingSecurityGroupIds,
+    });
     
     const logGroup = new logs.LogGroup(this, 'MatchScorerLogGroup', {
       logGroupName: config.logGroupName,
@@ -27,9 +33,12 @@ export class MatchScorerCdkStack extends cdk.Stack {
     });
 
     // --- MSK Construct ---
+    // MSK: Use existing or create new
     const mskConstruct = new MskConstruct(this, 'MskConstruct', {
       vpc: vpcConstruct.vpc,
       clusterName: config.mskClusterName,
+      existingMskClusterArn: config.existingMskClusterArn,
+      privateSubnetIds: vpcConstruct.privateSubnets.map(subnet => subnet.subnetId),
     });
 
     // --- ECS Construct ---
@@ -46,11 +55,11 @@ export class MatchScorerCdkStack extends cdk.Stack {
     // --- Lambda Constructs ---
     const submissionWatcherLambda = new SubmissionWatcherLambdaConstruct(this, 'SubmissionWatcherLambda', {
         vpc: vpcConstruct.vpc,
-        mskClusterArn: mskConstruct.mskCluster.attrArn,
+        mskClusterArn: mskConstruct.mskClusterArn,
         mskSecurityGroup: mskConstruct.mskSecurityGroup,
         ecsClusterName: ecsConstruct.cluster.clusterName,
         ecsTaskDefinitionArn: ecsConstruct.taskDefinition.taskDefinitionArn,
-        ecsSubnetIds: vpcConstruct.vpc.publicSubnets.map(subnet => subnet.subnetId),
+        ecsSubnetIds: vpcConstruct.publicSubnets.map(subnet => subnet.subnetId),
         ecsTaskSecurityGroupId: ecsConstruct.taskSecurityGroup.securityGroupId,
         ecsContainerName: ecsConstruct.container.containerName,
         taskExecutionRoleArn: ecsConstruct.taskExecutionRole.roleArn,
@@ -69,10 +78,10 @@ export class MatchScorerCdkStack extends cdk.Stack {
 
     const testDataSenderLambda = new TestDataSenderLambdaConstruct(this, 'TestDataSenderLambda', {
         vpc: vpcConstruct.vpc,
-        mskClusterArn: mskConstruct.mskCluster.attrArn,
+        mskClusterArn: mskConstruct.mskClusterArn,
         mskSecurityGroup: mskConstruct.mskSecurityGroup,
         environmentVariables: {
-             MSK_CLUSTER_ARN: mskConstruct.mskCluster.attrArn,
+             MSK_CLUSTER_ARN: mskConstruct.mskClusterArn,
              TARGET_TOPIC: 'submission.notification.create'
         },
         lambdaCodePath: path.join(__dirname, '..', '..', 'test-data-sender-lambda')
@@ -100,13 +109,18 @@ export class MatchScorerCdkStack extends cdk.Stack {
     });
 
     new cdk.CfnOutput(this, 'MskClusterArnOutput', {
-      value: mskConstruct.mskCluster.attrArn,
+      value: mskConstruct.mskClusterArn,
       description: 'ARN of the MSK cluster',
     });
 
     new cdk.CfnOutput(this, 'PublisherLambdaFunctionName', {
       value: testDataSenderLambda.lambdaFunction.functionName,
       description: 'Name of the Test Data Sender Lambda function',
+    });
+
+    new cdk.CfnOutput(this, 'VpcId', {
+      value: vpcConstruct.vpc.vpcId,
+      description: 'VPC ID (existing or created)',
     });
 
     // --- Parameter Store Setup for Dev Challenge ---
