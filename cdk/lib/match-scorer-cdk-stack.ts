@@ -8,7 +8,7 @@ import * as ssm from 'aws-cdk-lib/aws-ssm';
 import { VpcConstruct } from './vpc-construct';
 import { MskConstruct } from './msk-construct';
 import { EcsConstruct } from './ecs-construct';
-import { SubmissionWatcherLambdaConstruct, TestDataSenderLambdaConstruct } from './lambda-constructs';
+import { SubmissionWatcherLambdaConstruct } from './lambda-constructs';
 
 // Import the configuration
 import { config, devChallengeId, devScorers } from './config';
@@ -77,17 +77,6 @@ export class MatchScorerCdkStack extends cdk.Stack {
         existingLambdaRoleArn: config.existingLambdaRoleArn // Pass existing role ARN if configured
     });
 
-    const testDataSenderLambda = new TestDataSenderLambdaConstruct(this, 'TestDataSenderLambda', {
-        vpc: vpcConstruct.vpc,
-        mskClusterArn: mskConstruct.mskClusterArn,
-        mskSecurityGroup: mskConstruct.mskSecurityGroup,
-        environmentVariables: {
-             MSK_CLUSTER_ARN: mskConstruct.mskClusterArn,
-             TARGET_TOPIC: 'submission.notification.create'
-        },
-        lambdaCodePath: path.join(__dirname, '..', '..', 'test-data-sender-lambda')
-    });
-
     // --- Outputs (Referencing construct properties) ---
     new cdk.CfnOutput(this, 'EcsClusterArn', {
       value: ecsConstruct.cluster.clusterArn,
@@ -112,11 +101,6 @@ export class MatchScorerCdkStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'MskClusterArnOutput', {
       value: mskConstruct.mskClusterArn,
       description: 'ARN of the MSK cluster',
-    });
-
-    new cdk.CfnOutput(this, 'PublisherLambdaFunctionName', {
-      value: testDataSenderLambda.lambdaFunction.functionName,
-      description: 'Name of the Test Data Sender Lambda function',
     });
 
     new cdk.CfnOutput(this, 'VpcId', {
