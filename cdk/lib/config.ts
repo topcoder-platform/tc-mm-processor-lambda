@@ -21,12 +21,13 @@ export interface AppConfig {
   existingPublicSubnetIds?: string;  // Comma-separated subnet IDs
   existingPrivateSubnetIds?: string; // Comma-separated subnet IDs
   existingSecurityGroupIds?: string; // Comma-separated security group IDs
+  existingLambdaRoleArn?: string;    // Existing Lambda execution role ARN
 }
 
 // Function to load configuration from environment variables and file
 function loadConfig(): AppConfig {
   return {
-    submissionApiUrl: process.env.SUBMISSION_API_URL || 'https://api.topcoder-dev.com/v6',
+    submissionApiUrl: process.env.SUBMISSION_API_URL || 'https://api.topcoder-dev.com/v5',
     reviewScorecardId: process.env.REVIEW_SCORECARD_ID || '30001852',
     reviewTypeName: process.env.REVIEW_TYPE_NAME || 'MMScorer',
     logLevel: process.env.LOG_LEVEL || 'debug',
@@ -47,6 +48,7 @@ function loadConfig(): AppConfig {
     existingPublicSubnetIds: process.env.EXISTING_PUBLIC_SUBNET_IDS || '',
     existingPrivateSubnetIds: process.env.EXISTING_PRIVATE_SUBNET_IDS || '',
     existingSecurityGroupIds: process.env.EXISTING_SECURITY_GROUP_IDS || '',
+    existingLambdaRoleArn: process.env.EXISTING_LAMBDA_ROLE_ARN || '',
   };
 }
 

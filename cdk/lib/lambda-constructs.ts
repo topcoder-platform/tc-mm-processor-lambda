@@ -21,11 +21,12 @@ interface SubmissionWatcherLambdaProps {
   taskRoleArn: string;
   environmentVariables: { [key: string]: string };
   lambdaCodePath: string;
+  existingLambdaRoleArn?: string; // Optional: Use existing IAM role by ARN
 }
 
 export class SubmissionWatcherLambdaConstruct extends Construct {
   public readonly lambdaFunction: lambda.Function;
-  public readonly lambdaRole: iam.Role;
+  public readonly lambdaRole: iam.IRole;
 
   constructor(scope: Construct, id: string, props: SubmissionWatcherLambdaProps) {
     super(scope, id);
@@ -42,66 +43,85 @@ export class SubmissionWatcherLambdaConstruct extends Construct {
       taskExecutionRoleArn,
       taskRoleArn,
       environmentVariables,
-      lambdaCodePath
+      lambdaCodePath,
+      existingLambdaRoleArn
     } = props;
 
     // --- Lambda Execution Role ---
-    this.lambdaRole = new iam.Role(this, 'WatcherLambdaRole', {
-      assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
-      managedPolicies: [
-        iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole'),
-        iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaVPCAccessExecutionRole'),
-      ],
-    });
+    // Use existing role if provided, otherwise create new one
+    if (existingLambdaRoleArn) {
+      console.log(`Using existing Lambda role: ${existingLambdaRoleArn}`);
+      this.lambdaRole = iam.Role.fromRoleArn(this, 'WatcherLambdaRole', existingLambdaRoleArn, {
+        mutable: false // Cannot modify imported roles
+      });
+      
+      // Note: Cannot add policies to imported roles
+      // Ensure your existing role has the following permissions:
+      // - AWSLambdaBasicExecutionRole (arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole)
+      // - AWSLambdaVPCAccessExecutionRole (arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole)
+      // - ECS: RunTask, DescribeTasks, StopTask, ListTasks
+      // - Kafka: DescribeCluster, GetBootstrapBrokers, ListClusters
+      // - EC2: VPC and network interface permissions
+      // - IAM: PassRole for ECS task roles
+      // - SSM: GetParameter, GetParameters for /scorer/* paths
+    } else {
+      console.log('Creating new Lambda role');
+      const newRole = new iam.Role(this, 'WatcherLambdaRole', {
+        assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
+        managedPolicies: [
+          iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole'),
+          iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaVPCAccessExecutionRole'),
+        ],
+      });
 
-    // Permissions to run ECS Task
-    this.lambdaRole.addToPolicy(
-      new iam.PolicyStatement({
-        effect: iam.Effect.ALLOW,
-        actions: ['ecs:RunTask', 'ecs:DescribeTasks', 'ecs:StopTask', 'ecs:ListTasks'],
-        resources: ['*'], // Consider scoping this down if possible
-      })
-    );
+      // Permissions to run ECS Task
+      newRole.addToPolicy(
+        new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: ['ecs:RunTask', 'ecs:DescribeTasks', 'ecs:StopTask', 'ecs:ListTasks'],
+          resources: ['*'], // Consider scoping this down if possible
+        })
+      );
 
-     // Permissions for MSK Event Source Mapping & VPC access
-     this.lambdaRole.addToPolicy(
-       new iam.PolicyStatement({
-         effect: iam.Effect.ALLOW,
-         actions: [
-           'kafka:DescribeCluster',
-           'kafka:GetBootstrapBrokers',
-           'kafka:ListClusters',
-           'ec2:DescribeNetworkInterfaces',
-           'ec2:CreateNetworkInterface',
-           'ec2:DeleteNetworkInterface',
-           'ec2:DescribeSecurityGroups',
-           'ec2:DescribeSubnets',
-           'ec2:DescribeVpcs'
-         ],
-         resources: ['*'], // Keep broad for simplicity
-       })
-     );
+      // Permissions for MSK Event Source Mapping & VPC access
+      newRole.addToPolicy(
+        new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: [
+            'kafka:DescribeCluster',
+            'kafka:GetBootstrapBrokers',
+            'kafka:ListClusters',
+            'ec2:DescribeNetworkInterfaces',
+            'ec2:CreateNetworkInterface',
+            'ec2:DeleteNetworkInterface',
+            'ec2:DescribeSecurityGroups',
+            'ec2:DescribeSubnets',
+            'ec2:DescribeVpcs'
+          ],
+          resources: ['*'], // Keep broad for simplicity
+        })
+      );
 
-    // Permissions to pass ECS roles
-    this.lambdaRole.addToPolicy(
-      new iam.PolicyStatement({
-        effect: iam.Effect.ALLOW,
-        actions: ['iam:PassRole'],
-        resources: [taskExecutionRoleArn, taskRoleArn],
-        // conditions: { // Optional condition
-        //   StringEquals: { 'iam:PassedToService': 'ecs-tasks.amazonaws.com' }
-        // }
-      })
-    );
+      // Permissions to pass ECS roles
+      newRole.addToPolicy(
+        new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: ['iam:PassRole'],
+          resources: [taskExecutionRoleArn, taskRoleArn],
+        })
+      );
 
-    // Add SSM permissions for Parameter Store config fetch
-    this.lambdaRole.addToPolicy(
-      new iam.PolicyStatement({
-        effect: iam.Effect.ALLOW,
-        actions: ['ssm:GetParameter', 'ssm:GetParameters'],
-        resources: ['arn:aws:ssm:*:*:parameter/scorer/*'],
-      })
-    );
+      // Add SSM permissions for Parameter Store config fetch
+      newRole.addToPolicy(
+        new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: ['ssm:GetParameter', 'ssm:GetParameters'],
+          resources: ['arn:aws:ssm:*:*:parameter/scorer/*'],
+        })
+      );
+      
+      this.lambdaRole = newRole;
+    }
 
     // --- Lambda Function ---
     this.lambdaFunction = new lambda.Function(this, 'SubmissionWatcherLambda', {

@@ -73,7 +73,8 @@ export class MatchScorerCdkStack extends cdk.Stack {
             AUTH0_CLIENT_SECRET: config.auth0ClientSecret,
             AUTH0_PROXY_URL: config.auth0ProxyUrl,
         },
-        lambdaCodePath: path.join(__dirname, '..', '..', 'submission-watcher-lambda')
+        lambdaCodePath: path.join(__dirname, '..', '..', 'submission-watcher-lambda'),
+        existingLambdaRoleArn: config.existingLambdaRoleArn // Pass existing role ARN if configured
     });
 
     const testDataSenderLambda = new TestDataSenderLambdaConstruct(this, 'TestDataSenderLambda', {
