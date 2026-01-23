@@ -11,7 +11,7 @@ import { EcsConstruct } from './ecs-construct';
 import { SubmissionWatcherLambdaConstruct } from './lambda-constructs';
 
 // Import the configuration
-import { config, devChallengeId, devScorers } from './config';
+import { config, devScorers } from './config';
 
 export class MatchScorerCdkStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -111,7 +111,7 @@ export class MatchScorerCdkStack extends cdk.Stack {
     // --- Parameter Store Setup for Dev Challenge ---
     // Challenge config
     new ssm.CfnParameter(this, 'DevChallengeConfig', {
-      name: `/scorer/challenges/${devChallengeId}/config`,
+      name: `/scorer/challenges/${config.devChallengeId}/config`,
       type: 'String',
       value: JSON.stringify({
         name: 'Marathon Match 160',
@@ -126,7 +126,7 @@ export class MatchScorerCdkStack extends cdk.Stack {
     // Scorer configs
     devScorers.forEach((scorer) => {
       new ssm.CfnParameter(this, `DevScorerConfig${scorer.name}`, {
-        name: `/scorer/challenges/${devChallengeId}/scorers/${scorer.name}/config`,
+        name: `/scorer/challenges/${config.devChallengeId}/scorers/${scorer.name}/config`,
         type: 'String',
         value: JSON.stringify({
           name: scorer.name,

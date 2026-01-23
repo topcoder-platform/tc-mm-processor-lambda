@@ -22,6 +22,8 @@ export interface AppConfig {
   existingPrivateSubnetIds?: string; // Comma-separated subnet IDs
   existingSecurityGroupIds?: string; // Comma-separated security group IDs
   existingLambdaRoleArn?: string;    // Existing Lambda execution role ARN
+  // Dev configuration
+  devChallengeId: string;            // UUID format expected
 }
 
 // Function to load configuration from environment variables and file
@@ -49,14 +51,13 @@ function loadConfig(): AppConfig {
     existingPrivateSubnetIds: process.env.EXISTING_PRIVATE_SUBNET_IDS || '',
     existingSecurityGroupIds: process.env.EXISTING_SECURITY_GROUP_IDS || '',
     existingLambdaRoleArn: process.env.EXISTING_LAMBDA_ROLE_ARN || '',
+    // Dev configuration
+    devChallengeId: process.env.DEV_CHALLENGE_ID || '00000000-0000-0000-0000-000000000000',
   };
 }
 
 // Export the loaded configuration
 export const config: AppConfig = loadConfig();
-
-// Add dev challengeId and scorer types for Parameter Store setup
-export const devChallengeId = '30096756';
 export const devScorers = [
   {
     name: 'BioSlime',
