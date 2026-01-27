@@ -71,7 +71,6 @@ If you already have an MSK cluster and VPC, you can reuse them instead of creati
    export EXISTING_VPC_ID="vpc-0123456789abcdef0"
    
    # Optional: Specify exact subnets to use
-   export EXISTING_PUBLIC_SUBNET_IDS="subnet-pub1,subnet-pub2"
    export EXISTING_PRIVATE_SUBNET_IDS="subnet-priv1,subnet-priv2"
    
    # Optional: Specify security groups for Lambda/ECS
@@ -98,14 +97,12 @@ You can configure at different levels of granularity:
 2. **VPC + Subnets**: Specify VPC and exact subnets
    ```bash
    export EXISTING_VPC_ID="vpc-xxx"
-   export EXISTING_PUBLIC_SUBNET_IDS="subnet-pub1,subnet-pub2"
    export EXISTING_PRIVATE_SUBNET_IDS="subnet-priv1,subnet-priv2"
    ```
 
 3. **VPC + Subnets + Security Groups**: Full control
    ```bash
    export EXISTING_VPC_ID="vpc-xxx"
-   export EXISTING_PUBLIC_SUBNET_IDS="subnet-pub1,subnet-pub2"
    export EXISTING_PRIVATE_SUBNET_IDS="subnet-priv1,subnet-priv2"
    export EXISTING_SECURITY_GROUP_IDS="sg-xxx,sg-yyy"
    ```
@@ -342,7 +339,6 @@ If not tagged, CDK's `Vpc.fromLookup()` may not find them correctly.
 |----------|----------|---------|-------------|
 | `EXISTING_MSK_CLUSTER_ARN` | No | - | ARN of existing MSK cluster. If set, no new MSK created. |
 | `EXISTING_VPC_ID` | No | - | VPC ID of existing VPC. If set, no new VPC created. |
-| `EXISTING_PUBLIC_SUBNET_IDS` | No | - | Comma-separated public subnet IDs. If not set, auto-discovered from VPC. |
 | `EXISTING_PRIVATE_SUBNET_IDS` | No | - | Comma-separated private subnet IDs. If not set, auto-discovered from VPC. |
 | `EXISTING_SECURITY_GROUP_IDS` | No | - | Comma-separated security group IDs for Lambda/ECS. |
 | `AUTH0_CLIENT_ID` | **Yes** | - | Auth0 M2M client ID |

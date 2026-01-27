@@ -101,7 +101,7 @@ const runScorerTask = async ({ challengeId, scorerType, submissionId }) => {
       awsvpcConfiguration: {
         subnets: config.subnets,
         securityGroups: config.securityGroups,
-        assignPublicIp: 'ENABLED',
+        assignPublicIp: 'DISABLED',
       },
     },
     overrides: {
