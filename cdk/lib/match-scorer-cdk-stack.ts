@@ -32,6 +32,11 @@ export class MatchScorerCdkStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.DESTROY, // For POC only
     });
 
+    // Validate that required role ARNs are provided
+    if (!config.ecsTaskExecutionRoleArn || !config.ecsTaskRoleArn) {
+      throw new Error('ECS_TASK_EXECUTION_ROLE_ARN and ECS_TASK_ROLE_ARN environment variables must be provided');
+    }
+
     // --- MSK Construct ---
     // MSK: Use existing or create new
     const mskConstruct = new MskConstruct(this, 'MskConstruct', {
@@ -49,7 +54,9 @@ export class MatchScorerCdkStack extends cdk.Stack {
         dockerImagePath: path.join(__dirname, '..', '..', 'java-scorer'),
         containerEnvironment: {
             AWS_REGION: cdk.Stack.of(this).region,
-        }
+        },
+        taskExecutionRoleArn: config.ecsTaskExecutionRoleArn,
+        taskRoleArn: config.ecsTaskRoleArn
     });
 
     // --- Lambda Constructs ---
@@ -62,8 +69,8 @@ export class MatchScorerCdkStack extends cdk.Stack {
         ecsSubnetIds: vpcConstruct.publicSubnets.map(subnet => subnet.subnetId),
         ecsTaskSecurityGroupId: ecsConstruct.taskSecurityGroup.securityGroupId,
         ecsContainerName: ecsConstruct.container.containerName,
-        taskExecutionRoleArn: ecsConstruct.taskExecutionRole.roleArn,
-        taskRoleArn: ecsConstruct.taskRole.roleArn,
+        taskExecutionRoleArn: config.ecsTaskExecutionRoleArn,
+        taskRoleArn: config.ecsTaskRoleArn,
         environmentVariables: {
             TASK_TIMEOUT_SECONDS: config.taskTimeoutSeconds,
             MAX_RETRIES: config.maxRetries,

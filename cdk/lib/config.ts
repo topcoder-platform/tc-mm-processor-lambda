@@ -22,6 +22,9 @@ export interface AppConfig {
   existingPrivateSubnetIds?: string; // Comma-separated subnet IDs
   existingSecurityGroupIds?: string; // Comma-separated security group IDs
   existingLambdaRoleArn?: string;    // Existing Lambda execution role ARN
+  // ECS IAM Role ARNs (manually created)
+  ecsTaskExecutionRoleArn: string;
+  ecsTaskRoleArn: string;
   // Dev configuration
   devChallengeId: string;            // UUID format expected
 }
@@ -51,6 +54,9 @@ function loadConfig(): AppConfig {
     existingPrivateSubnetIds: process.env.EXISTING_PRIVATE_SUBNET_IDS || '',
     existingSecurityGroupIds: process.env.EXISTING_SECURITY_GROUP_IDS || '',
     existingLambdaRoleArn: process.env.EXISTING_LAMBDA_ROLE_ARN || '',
+    // ECS IAM Role ARNs (must be provided via environment variables)
+    ecsTaskExecutionRoleArn: process.env.ECS_TASK_EXECUTION_ROLE_ARN || '',
+    ecsTaskRoleArn: process.env.ECS_TASK_ROLE_ARN || '',
     // Dev configuration
     devChallengeId: process.env.DEV_CHALLENGE_ID || '00000000-0000-0000-0000-000000000000',
   };

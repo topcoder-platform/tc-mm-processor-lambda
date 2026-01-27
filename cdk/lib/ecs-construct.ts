@@ -13,22 +13,26 @@ interface EcsConstructProps {
     clusterName: string;
     dockerImagePath: string;
     containerEnvironment: { [key: string]: string };
+    taskExecutionRoleArn: string;
+    taskRoleArn: string;
 }
 
 export class EcsConstruct extends Construct {
     public readonly cluster: ecs.Cluster;
     public readonly taskDefinition: ecs.FargateTaskDefinition;
     public readonly container: ecs.ContainerDefinition;
-    public readonly taskExecutionRole: iam.Role;
-    public readonly taskRole: iam.Role;
     public readonly taskSecurityGroup: ec2.SecurityGroup;
     public readonly dockerImage: ecr_assets.DockerImageAsset;
 
     constructor(scope: Construct, id: string, props: EcsConstructProps) {
         super(scope, id);
 
-        const { vpc, logGroup, clusterName, containerEnvironment } = props;
+        const { vpc, logGroup, clusterName, containerEnvironment, taskExecutionRoleArn, taskRoleArn } = props;
         const dockerImagePath = path.join(__dirname, '..', '..', 'java-scorer');
+
+        // Import the manually created roles using their ARNs
+        const taskExecutionRole = iam.Role.fromRoleArn(this, 'ImportedTaskExecutionRole', taskExecutionRoleArn);
+        const taskRole = iam.Role.fromRoleArn(this, 'ImportedTaskRole', taskRoleArn);
 
         // --- ECS Cluster ---
         this.cluster = new ecs.Cluster(this, 'MatchScorerCluster', {
@@ -36,43 +40,12 @@ export class EcsConstruct extends Construct {
             clusterName: clusterName,
         });
 
-        // --- ECS Task Execution Role ---
-        this.taskExecutionRole = new iam.Role(this, 'TaskExecutionRole', {
-            assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
-            managedPolicies: [
-                iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AmazonECSTaskExecutionRolePolicy')
-            ]
-        });
-
-        // --- ECS Task Role ---
-        // Note: The original stack had the same policy as the execution role.
-        // You might need to add specific permissions for your application logic here.
-        this.taskRole = new iam.Role(this, 'TaskRole', {
-            assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
-             managedPolicies: [
-                iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AmazonECSTaskExecutionRolePolicy')
-            ]
-        });
-
-        // Add SSM and S3 permissions to taskRole
-        this.taskRole.addManagedPolicy(
-            iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonSSMReadOnlyAccess')
-        );
-        this.taskRole.addToPolicy(new iam.PolicyStatement({
-            effect: iam.Effect.ALLOW,
-            actions: [
-                's3:GetObject',
-                's3:PutObject'
-            ],
-            resources: ['arn:aws:s3:::topcoder-submissions/*']
-        }));
-
         // --- ECS Task Definition ---
         this.taskDefinition = new ecs.FargateTaskDefinition(this, 'MatchScorerTask', {
             memoryLimitMiB: 512,
             cpu: 256,
-            executionRole: this.taskExecutionRole,
-            taskRole: this.taskRole,
+            executionRole: taskExecutionRole,
+            taskRole: taskRole,
             runtimePlatform: {
                 operatingSystemFamily: ecs.OperatingSystemFamily.LINUX,
                 cpuArchitecture: ecs.CpuArchitecture.X86_64,
