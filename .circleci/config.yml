@@ -47,7 +47,7 @@ build_and_deploy_steps: &build_and_deploy_steps
     - run:
           name: Build Docker Image
           command: |
-              npm install -g aws-cdk
+              sudo npm install -g aws-cdk
     - deploy:
           name: Deploy Using MasterScript
           command: |
