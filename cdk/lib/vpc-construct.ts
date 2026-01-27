@@ -3,14 +3,12 @@ import { Construct } from 'constructs';
 
 interface VpcConstructProps {
   existingVpcId?: string;
-  existingPublicSubnetIds?: string;  // Comma-separated
-  existingPrivateSubnetIds?: string; // Comma-separated
-  existingSecurityGroupIds?: string; // Comma-separated
+  existingPrivateSubnetIds?: string; // Comma-separated subnet IDs
+  existingSecurityGroupIds?: string; // Comma-separated security group IDs
 }
 
 export class VpcConstruct extends Construct {
   public readonly vpc: ec2.IVpc;
-  public readonly publicSubnets: ec2.ISubnet[];
   public readonly privateSubnets: ec2.ISubnet[];
   public readonly securityGroups: ec2.ISecurityGroup[];
 
@@ -26,18 +24,7 @@ export class VpcConstruct extends Construct {
         vpcId: props.existingVpcId,
       });
 
-      // Import subnets if provided
-      if (props.existingPublicSubnetIds) {
-        const publicSubnetIds = props.existingPublicSubnetIds.split(',').map(s => s.trim());
-        console.log(`Using existing public subnets: ${publicSubnetIds.join(', ')}`);
-        this.publicSubnets = publicSubnetIds.map((subnetId, index) =>
-          ec2.Subnet.fromSubnetId(this, `PublicSubnet${index}`, subnetId)
-        );
-      } else {
-        // Use VPC's public subnets
-        this.publicSubnets = this.vpc.publicSubnets;
-      }
-
+      // Import private subnets if provided
       if (props.existingPrivateSubnetIds) {
         const privateSubnetIds = props.existingPrivateSubnetIds.split(',').map(s => s.trim());
         console.log(`Using existing private subnets: ${privateSubnetIds.join(', ')}`);
@@ -63,16 +50,11 @@ export class VpcConstruct extends Construct {
         this.securityGroups = [];
       }
     } else {
-      // Create new VPC
+      // Create new VPC with private subnets only (public subnets for NAT Gateway)
       console.log('Creating new VPC');
       const newVpc = new ec2.Vpc(this, 'MatchScorerVpc', {
         maxAzs: 2,
         subnetConfiguration: [
-          {
-            cidrMask: 24,
-            name: 'public-subnet',
-            subnetType: ec2.SubnetType.PUBLIC,
-          },
           {
             cidrMask: 24,
             name: 'private-subnet',
@@ -83,7 +65,7 @@ export class VpcConstruct extends Construct {
       });
 
       this.vpc = newVpc;
-      this.publicSubnets = newVpc.publicSubnets;
+      // Only expose private subnets - public subnets are only for NAT Gateway
       this.privateSubnets = newVpc.privateSubnets;
       this.securityGroups = [];
     }

@@ -21,7 +21,6 @@ export class MatchScorerCdkStack extends cdk.Stack {
     // VPC: Use existing or create new
     const vpcConstruct = new VpcConstruct(this, 'VpcConstruct', {
       existingVpcId: config.existingVpcId,
-      existingPublicSubnetIds: config.existingPublicSubnetIds,
       existingPrivateSubnetIds: config.existingPrivateSubnetIds,
       existingSecurityGroupIds: config.existingSecurityGroupIds,
     });
@@ -66,7 +65,7 @@ export class MatchScorerCdkStack extends cdk.Stack {
         mskSecurityGroup: mskConstruct.mskSecurityGroup,
         ecsClusterName: ecsConstruct.cluster.clusterName,
         ecsTaskDefinitionArn: ecsConstruct.taskDefinition.taskDefinitionArn,
-        ecsSubnetIds: vpcConstruct.publicSubnets.map(subnet => subnet.subnetId),
+        ecsSubnetIds: vpcConstruct.privateSubnets.map(subnet => subnet.subnetId),
         ecsTaskSecurityGroupId: ecsConstruct.taskSecurityGroup.securityGroupId,
         ecsContainerName: ecsConstruct.container.containerName,
         taskExecutionRoleArn: config.ecsTaskExecutionRoleArn,

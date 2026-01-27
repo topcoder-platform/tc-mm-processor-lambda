@@ -18,7 +18,6 @@ export interface AppConfig {
   // Existing infrastructure (optional)
   existingMskClusterArn?: string;
   existingVpcId?: string;
-  existingPublicSubnetIds?: string;  // Comma-separated subnet IDs
   existingPrivateSubnetIds?: string; // Comma-separated subnet IDs
   existingSecurityGroupIds?: string; // Comma-separated security group IDs
   existingLambdaRoleArn?: string;    // Existing Lambda execution role ARN
@@ -50,7 +49,6 @@ function loadConfig(): AppConfig {
     // Existing infrastructure (optional)
     existingMskClusterArn: process.env.EXISTING_MSK_CLUSTER_ARN || '',
     existingVpcId: process.env.EXISTING_VPC_ID || '',
-    existingPublicSubnetIds: process.env.EXISTING_PUBLIC_SUBNET_IDS || '',
     existingPrivateSubnetIds: process.env.EXISTING_PRIVATE_SUBNET_IDS || '',
     existingSecurityGroupIds: process.env.EXISTING_SECURITY_GROUP_IDS || '',
     existingLambdaRoleArn: process.env.EXISTING_LAMBDA_ROLE_ARN || '',
