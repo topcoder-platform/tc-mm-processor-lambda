@@ -17,7 +17,7 @@ export class VpcConstruct extends Construct {
 
     if (props?.existingVpcId) {
       // Use existing VPC
-      console.log(`Using existing VPC: ${props.existingVpcId}`);
+      // console.log(`Using existing VPC: ${props.existingVpcId}`);
       
       // Import VPC
       this.vpc = ec2.Vpc.fromLookup(this, 'ExistingVpc', {
@@ -27,7 +27,7 @@ export class VpcConstruct extends Construct {
       // Import private subnets if provided
       if (props.existingPrivateSubnetIds) {
         const privateSubnetIds = props.existingPrivateSubnetIds.split(',').map(s => s.trim());
-        console.log(`Using existing private subnets: ${privateSubnetIds.join(', ')}`);
+        // console.log(`Using existing private subnets: ${privateSubnetIds.join(', ')}`);
         this.privateSubnets = privateSubnetIds.map((subnetId, index) =>
           ec2.Subnet.fromSubnetId(this, `PrivateSubnet${index}`, subnetId)
         );
@@ -39,7 +39,7 @@ export class VpcConstruct extends Construct {
       // Import security groups if provided
       if (props.existingSecurityGroupIds) {
         const securityGroupIds = props.existingSecurityGroupIds.split(',').map(s => s.trim());
-        console.log(`Using existing security groups: ${securityGroupIds.join(', ')}`);
+        // console.log(`Using existing security groups: ${securityGroupIds.join(', ')}`);
         this.securityGroups = securityGroupIds.map((sgId, index) =>
           ec2.SecurityGroup.fromSecurityGroupId(this, `SecurityGroup${index}`, sgId, {
             allowAllOutbound: true,
@@ -72,7 +72,22 @@ export class VpcConstruct extends Construct {
       this.vpc = newVpc;
       // Only expose private subnets - public subnets are only for NAT Gateway
       this.privateSubnets = newVpc.privateSubnets;
-      this.securityGroups = [];
+      
+      // Create a default security group for services (MSK, Lambda, ECS)
+      const defaultSecurityGroup = new ec2.SecurityGroup(this, 'DefaultSecurityGroup', {
+        vpc: newVpc,
+        description: 'Default security group for Match Scorer services',
+        allowAllOutbound: true,
+      });
+
+      // Allow internal communication within the security group
+      defaultSecurityGroup.addIngressRule(
+        defaultSecurityGroup,
+        ec2.Port.allTraffic(),
+        'Allow internal communication between services'
+      );
+
+      this.securityGroups = [defaultSecurityGroup];
     }
   }
 } 

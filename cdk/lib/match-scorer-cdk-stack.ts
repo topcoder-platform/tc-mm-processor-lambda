@@ -43,6 +43,7 @@ export class MatchScorerCdkStack extends cdk.Stack {
       clusterName: config.mskClusterName,
       existingMskClusterArn: config.existingMskClusterArn,
       privateSubnetIds: vpcConstruct.privateSubnets.map(subnet => subnet.subnetId),
+      securityGroups: vpcConstruct.securityGroups, // Pass security groups from VPC
     });
 
     // --- ECS Construct ---
