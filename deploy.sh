@@ -4,6 +4,7 @@ export CDK_DEFAULT_ACCOUNT=${AWS_ACCOUNT_ID}
 export CDK_DEFAULT_REGION=${AWS_REGION}
 cd submission-watcher-lambda
 npm install
+cd ..
 cd cdk
 npm install
 npm run build
