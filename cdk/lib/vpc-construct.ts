@@ -57,6 +57,11 @@ export class VpcConstruct extends Construct {
         subnetConfiguration: [
           {
             cidrMask: 24,
+            name: 'public-subnet',
+            subnetType: ec2.SubnetType.PUBLIC,
+          },
+          {
+            cidrMask: 24,
             name: 'private-subnet',
             subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
           },

@@ -1,10 +1,9 @@
 import * as cdk from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
+import * as nodejs from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as iam from 'aws-cdk-lib/aws-iam';
-import * as msk from 'aws-cdk-lib/aws-msk'; // Need full import for CfnCluster attributes if used directly
 import { Construct } from 'constructs';
-import * as path from 'path';
 
 // --- Submission Watcher Lambda ---
 
@@ -124,41 +123,68 @@ export class SubmissionWatcherLambdaConstruct extends Construct {
     }
 
     // --- Lambda Function ---
-    this.lambdaFunction = new lambda.Function(this, 'SubmissionWatcherLambda', {
-      functionName: 'SubmissionWatcherLambda',
-      runtime: lambda.Runtime.NODEJS_20_X,
-      handler: 'index.handler',
-      code: lambda.Code.fromAsset(lambdaCodePath, { // Use passed-in path
-        bundling: {
-          image: lambda.Runtime.NODEJS_20_X.bundlingImage,
-          command: ['bash', '-c', 'npm install && cp -R . /asset-output'],
-          user: 'root',
+    // Skip Docker bundling in CI/CD environments where volume mounting is problematic
+    const skipDockerBundling = process.env.CI === 'true' || process.env.SIMPLE_BUNDLING === 'true';
+    
+    if (skipDockerBundling) {
+      console.log('Skipping Docker bundling - using pre-installed dependencies');
+      this.lambdaFunction = new lambda.Function(this, 'SubmissionWatcherLambda', {
+        functionName: 'SubmissionWatcherLambda',
+        runtime: lambda.Runtime.NODEJS_20_X,
+        handler: 'index.handler',
+        code: lambda.Code.fromAsset(lambdaCodePath), // No bundling
+        timeout: cdk.Duration.seconds(60),
+        memorySize: 128,
+        role: this.lambdaRole,
+        environment: {
+          ...environmentVariables,
+          ECS_CLUSTER: ecsClusterName,
+          ECS_TASK_DEFINITION: ecsTaskDefinitionArn,
+          ECS_SUBNETS: ecsSubnetIds.join(','),
+          ECS_SECURITY_GROUPS: ecsTaskSecurityGroupId,
+          ECS_CONTAINER_NAME: ecsContainerName,
         },
-      }),
-      timeout: cdk.Duration.seconds(60),
-      memorySize: 128,
-      role: this.lambdaRole,
-      environment: {
-        ...environmentVariables, // Spread existing env vars
-        ECS_CLUSTER: ecsClusterName,
-        ECS_TASK_DEFINITION: ecsTaskDefinitionArn,
-        ECS_SUBNETS: ecsSubnetIds.join(','),
-        ECS_SECURITY_GROUPS: ecsTaskSecurityGroupId,
-        ECS_CONTAINER_NAME: ecsContainerName,
-      },
-      vpc,
-      vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
-    });
+        vpc,
+        vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
+      });
+    } else {
+      // Use Docker bundling for local development
+      this.lambdaFunction = new lambda.Function(this, 'SubmissionWatcherLambda', {
+        functionName: 'SubmissionWatcherLambda',
+        runtime: lambda.Runtime.NODEJS_20_X,
+        handler: 'index.handler',
+        code: lambda.Code.fromAsset(lambdaCodePath, {
+          bundling: {
+            image: lambda.Runtime.NODEJS_20_X.bundlingImage,
+            command: ['bash', '-c', 'npm install && cp -R . /asset-output'],
+            user: 'root',
+          },
+        }),
+        timeout: cdk.Duration.seconds(60),
+        memorySize: 128,
+        role: this.lambdaRole,
+        environment: {
+          ...environmentVariables,
+          ECS_CLUSTER: ecsClusterName,
+          ECS_TASK_DEFINITION: ecsTaskDefinitionArn,
+          ECS_SUBNETS: ecsSubnetIds.join(','),
+          ECS_SECURITY_GROUPS: ecsTaskSecurityGroupId,
+          ECS_CONTAINER_NAME: ecsContainerName,
+        },
+        vpc,
+        vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
+      });
+    }
 
     // --- MSK Event Source Mapping ---
-     const eventSourceMapping = new lambda.CfnEventSourceMapping(this, 'KafkaEventSourceMapping', {
-       functionName: this.lambdaFunction.functionName,
-       eventSourceArn: mskClusterArn,
-       topics: ['submission.notification.create'],
-       batchSize: 100,
-       startingPosition: 'TRIM_HORIZON',
-       maximumBatchingWindowInSeconds: 1
-     });
+    new lambda.CfnEventSourceMapping(this, 'KafkaEventSourceMapping', {
+      functionName: this.lambdaFunction.functionName,
+      eventSourceArn: mskClusterArn,
+      topics: ['submission.notification.create'],
+      batchSize: 100,
+      startingPosition: 'TRIM_HORIZON',
+      maximumBatchingWindowInSeconds: 1
+    });
 
     // --- Allow Lambda to connect to MSK ---
     mskSecurityGroup.addIngressRule(
