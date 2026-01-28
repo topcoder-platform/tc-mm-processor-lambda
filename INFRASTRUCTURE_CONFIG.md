@@ -107,37 +107,26 @@ You can configure at different levels of granularity:
    export EXISTING_SECURITY_GROUP_IDS="sg-xxx,sg-yyy"
    ```
 
-4. **Verify MSK Security Group**:
+4. **Security Group Configuration**:
+   
+   **VPC Default Security Group (Automatic)**
    ```bash
-   # Get MSK security group ID
-   MSK_ARN="arn:aws:kafka:us-east-1:123456789012:cluster/your-cluster/uuid"
+   # No configuration needed - Lambda and MSK automatically communicate
+   # via VPC default security group
    
-   aws kafka describe-cluster \
-     --cluster-arn "$MSK_ARN" \
-     --region us-east-1 \
-     --query "ClusterInfo.BrokerNodeGroupInfo.SecurityGroups"
+   # Optional: Verify VPC default security group allows internal communication
+   VPC_ID="vpc-xxxxxxxx"
+   DEFAULT_SG=$(aws ec2 describe-security-groups \
+     --filters "Name=vpc-id,Values=$VPC_ID" "Name=group-name,Values=default" \
+     --query "SecurityGroups[0].GroupId" --output text)
    
-   # Verify security group allows inbound on port 9094
-   aws ec2 describe-security-groups \
-     --group-ids sg-xxxxxxxxx \
-     --region us-east-1
+   echo "VPC Default Security Group: $DEFAULT_SG"
+   
+   # Should have a rule allowing traffic from itself (internal VPC communication)
+   aws ec2 describe-security-groups --group-ids "$DEFAULT_SG"
    ```
 
-5. **Update Security Group (if needed)**:
-   ```bash
-   # Allow Lambda and ECS to connect to MSK
-   MSK_SG_ID="sg-msk-xxxxx"
-   VPC_CIDR="10.0.0.0/16"  # Your VPC CIDR
-   
-   aws ec2 authorize-security-group-ingress \
-     --group-id "$MSK_SG_ID" \
-     --protocol tcp \
-     --port 9094 \
-     --cidr "$VPC_CIDR" \
-     --region us-east-1
-   ```
-
-7. **Deploy**:
+5. **Deploy**:
    ```bash
    npm run build
    npm run deploy
@@ -256,23 +245,36 @@ Result:
 
 ## Troubleshooting
 
-### Issue: MSK Security Group Not Found
+### Issue: Lambda Cannot Connect to MSK
 
-**Error**: `Security group 'xxx-msk-sg' not found`
+**Error**: Lambda timeout or connection refused when connecting to MSK
 
-**Solution**: The code tries to lookup the MSK security group by name. If your existing MSK uses a different naming convention, you need to update `cdk/lib/msk-construct.ts`:
+**Solution**: Verify VPC default security group allows internal communication:
 
-```typescript
-// Option 1: Lookup by ID instead of name
-this.mskSecurityGroup = ec2.SecurityGroup.fromSecurityGroupId(
-  this,
-  'ExistingMskSecurityGroup',
-  'sg-xxxxxxxxxxxxx',  // Your actual security group ID
-  { allowAllOutbound: true }
-);
+```bash
+# 1. Get VPC default security group
+VPC_ID="vpc-xxxxxxxx"  # Your VPC ID
+DEFAULT_SG=$(aws ec2 describe-security-groups \
+  --filters "Name=vpc-id,Values=$VPC_ID" "Name=group-name,Values=default" \
+  --query "SecurityGroups[0].GroupId" --output text)
 
-// Option 2: Lookup by tag
-// ... (see code for details)
+echo "VPC Default Security Group: $DEFAULT_SG"
+
+# 2. Verify it allows internal communication (should have self-referencing rule)
+aws ec2 describe-security-groups --group-ids "$DEFAULT_SG" \
+  --query "SecurityGroups[0].IpPermissions"
+
+# 3. If no self-referencing rule exists, add one
+aws ec2 authorize-security-group-ingress \
+  --group-id "$DEFAULT_SG" \
+  --source-group "$DEFAULT_SG" \
+  --protocol -1 \
+  --region us-east-1
+
+# 4. Verify Lambda and MSK are in the same VPC
+aws lambda get-function-configuration \
+  --function-name SubmissionWatcherLambda \
+  --query "VpcConfig.VpcId"
 ```
 
 ### Issue: VPC Lookup Fails

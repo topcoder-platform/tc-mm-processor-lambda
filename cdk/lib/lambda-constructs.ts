@@ -1,7 +1,6 @@
 import * as cdk from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
-import * as nodejs from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import { Construct } from 'constructs';
 
@@ -10,7 +9,6 @@ import { Construct } from 'constructs';
 interface SubmissionWatcherLambdaProps {
   vpc: ec2.IVpc;
   mskClusterArn: string; // Use ARN directly
-  mskSecurityGroup: ec2.ISecurityGroup; // Use the SG from MskConstruct
   ecsClusterName: string;
   ecsTaskDefinitionArn: string;
   ecsSubnetIds: string[]; // Pass subnet IDs explicitly
@@ -33,7 +31,6 @@ export class SubmissionWatcherLambdaConstruct extends Construct {
     const {
       vpc,
       mskClusterArn,
-      mskSecurityGroup,
       ecsClusterName,
       ecsTaskDefinitionArn,
       ecsSubnetIds,
@@ -186,11 +183,7 @@ export class SubmissionWatcherLambdaConstruct extends Construct {
       maximumBatchingWindowInSeconds: 1
     });
 
-    // --- Allow Lambda to connect to MSK ---
-    mskSecurityGroup.addIngressRule(
-        this.lambdaFunction.connections.securityGroups[0],
-        ec2.Port.tcp(9094), // Default TLS port for Kafka
-        'Allow Kafka TLS traffic from Scorer Lambda ESM'
-    );
+    // Lambda and MSK communicate via VPC default security group - no additional configuration needed
+    console.log('Lambda will communicate with MSK via VPC default security group');
   }
 } 
