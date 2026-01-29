@@ -42,6 +42,7 @@ export class MatchScorerCdkStack extends cdk.Stack {
       vpc: vpcConstruct.vpc,
       clusterName: config.mskClusterName,
       existingMskClusterArn: config.existingMskClusterArn,
+      existingMskSecurityGroupId: config.existingMskSecurityGroupId,
       privateSubnetIds: vpcConstruct.privateSubnets.map(subnet => subnet.subnetId),
     });
 
@@ -61,6 +62,8 @@ export class MatchScorerCdkStack extends cdk.Stack {
     // --- Lambda Constructs ---
     const submissionWatcherLambda = new SubmissionWatcherLambdaConstruct(this, 'SubmissionWatcherLambda', {
         vpc: vpcConstruct.vpc,
+        vpcSecurityGroups: vpcConstruct.securityGroups, // Pass VPC security groups
+        mskSecurityGroup: mskConstruct.mskSecurityGroup, // Pass MSK security group if available
         mskClusterArn: mskConstruct.mskClusterArn,
         ecsClusterName: ecsConstruct.cluster.clusterName,
         ecsTaskDefinitionArn: ecsConstruct.taskDefinition.taskDefinitionArn,

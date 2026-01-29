@@ -8,6 +8,8 @@ import { Construct } from 'constructs';
 
 interface SubmissionWatcherLambdaProps {
   vpc: ec2.IVpc;
+  vpcSecurityGroups?: ec2.ISecurityGroup[]; // Security groups from VPC construct
+  mskSecurityGroup?: ec2.ISecurityGroup; // Security group from MSK construct (if available)
   mskClusterArn: string; // Use ARN directly
   ecsClusterName: string;
   ecsTaskDefinitionArn: string;
@@ -30,6 +32,8 @@ export class SubmissionWatcherLambdaConstruct extends Construct {
 
     const {
       vpc,
+      vpcSecurityGroups,
+      mskSecurityGroup,
       mskClusterArn,
       ecsClusterName,
       ecsTaskDefinitionArn,
@@ -123,6 +127,22 @@ export class SubmissionWatcherLambdaConstruct extends Construct {
     // Skip Docker bundling in CI/CD environments where volume mounting is problematic
     const skipDockerBundling = process.env.CI === 'true' || process.env.SIMPLE_BUNDLING === 'true';
     
+    // Determine which security groups to use for Lambda
+    let lambdaSecurityGroups: ec2.ISecurityGroup[] | undefined;
+    if (mskSecurityGroup) {
+      // Use MSK security group if available (for existing MSK clusters)
+      lambdaSecurityGroups = [mskSecurityGroup];
+      console.log('Lambda will use MSK security group for communication');
+    } else if (vpcSecurityGroups && vpcSecurityGroups.length > 0) {
+      // Fall back to VPC security groups
+      lambdaSecurityGroups = vpcSecurityGroups;
+      console.log('Lambda will use VPC security groups for communication');
+    } else {
+      // Let Lambda use VPC default security group
+      lambdaSecurityGroups = undefined;
+      console.log('Lambda will use VPC default security group for communication');
+    }
+    
     if (skipDockerBundling) {
       console.log('Skipping Docker bundling - using pre-installed dependencies');
       this.lambdaFunction = new lambda.Function(this, 'SubmissionWatcherLambda', {
@@ -143,6 +163,7 @@ export class SubmissionWatcherLambdaConstruct extends Construct {
         },
         vpc,
         vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
+        securityGroups: lambdaSecurityGroups, // Use determined security groups
       });
     } else {
       // Use Docker bundling for local development
@@ -170,6 +191,7 @@ export class SubmissionWatcherLambdaConstruct extends Construct {
         },
         vpc,
         vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
+        securityGroups: lambdaSecurityGroups, // Use determined security groups
       });
     }
 
@@ -183,7 +205,13 @@ export class SubmissionWatcherLambdaConstruct extends Construct {
       maximumBatchingWindowInSeconds: 1
     });
 
-    // Lambda and MSK communicate via VPC default security group - no additional configuration needed
-    console.log('Lambda will communicate with MSK via VPC default security group');
+    // Lambda and MSK communicate via security groups - no additional configuration needed
+    if (mskSecurityGroup) {
+      console.log('Lambda assigned MSK security group for direct communication');
+    } else if (vpcSecurityGroups && vpcSecurityGroups.length > 0) {
+      console.log(`Lambda assigned ${vpcSecurityGroups.length} VPC security group(s) for MSK communication`);
+    } else {
+      console.log('Lambda will use VPC default security group for MSK communication');
+    }
   }
 } 

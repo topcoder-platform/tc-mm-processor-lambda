@@ -17,6 +17,7 @@ export interface AppConfig {
   auth0ProxyUrl: string;
   // Existing infrastructure (optional)
   existingMskClusterArn?: string;
+  existingMskSecurityGroupId?: string; // Security group ID for existing MSK cluster
   existingVpcId?: string;
   existingPrivateSubnetIds?: string; // Comma-separated subnet IDs
   existingSecurityGroupIds?: string; // Comma-separated security group IDs
@@ -48,6 +49,7 @@ function loadConfig(): AppConfig {
     auth0ProxyUrl: process.env.AUTH0_PROXY_URL || 'https://auth0proxy.topcoder-dev.com/token',
     // Existing infrastructure (optional)
     existingMskClusterArn: process.env.EXISTING_MSK_CLUSTER_ARN || '',
+    existingMskSecurityGroupId: process.env.EXISTING_MSK_SECURITY_GROUP_ID || '',
     existingVpcId: process.env.EXISTING_VPC_ID || '',
     existingPrivateSubnetIds: process.env.EXISTING_PRIVATE_SUBNET_IDS || '',
     existingSecurityGroupIds: process.env.EXISTING_SECURITY_GROUP_IDS || '',
