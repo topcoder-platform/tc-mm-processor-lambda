@@ -17,6 +17,9 @@ export class MatchScorerCdkStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
+    // Disable CDK metadata to avoid unnecessary AWS::CDK::Metadata resource
+    this.node.setContext('@aws-cdk/core:disableMetadata', true);
+
     // --- Base Infrastructure ---
     // VPC: Use existing or create new
     const vpcConstruct = new VpcConstruct(this, 'VpcConstruct', {
@@ -56,7 +59,8 @@ export class MatchScorerCdkStack extends cdk.Stack {
             AWS_REGION: cdk.Stack.of(this).region,
         },
         taskExecutionRoleArn: config.ecsTaskExecutionRoleArn,
-        taskRoleArn: config.ecsTaskRoleArn
+        taskRoleArn: config.ecsTaskRoleArn,
+        existingTaskSecurityGroupId: config.existingEcsTaskSecurityGroupId
     });
 
     // --- Lambda Constructs ---

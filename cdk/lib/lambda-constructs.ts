@@ -162,8 +162,13 @@ export class SubmissionWatcherLambdaConstruct extends Construct {
           ECS_CONTAINER_NAME: ecsContainerName,
         },
         vpc,
-        vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
+        vpcSubnets: { 
+          subnets: ecsSubnetIds.map((subnetId, index) => 
+            ec2.Subnet.fromSubnetId(this, `LambdaSubnet${index}`, subnetId)
+          )
+        },
         securityGroups: lambdaSecurityGroups, // Use determined security groups
+        allowPublicSubnet: false,
       });
     } else {
       // Use Docker bundling for local development
@@ -190,8 +195,13 @@ export class SubmissionWatcherLambdaConstruct extends Construct {
           ECS_CONTAINER_NAME: ecsContainerName,
         },
         vpc,
-        vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
+        vpcSubnets: { 
+          subnets: ecsSubnetIds.map((subnetId, index) => 
+            ec2.Subnet.fromSubnetId(this, `LambdaSubnetDocker${index}`, subnetId)
+          )
+        },
         securityGroups: lambdaSecurityGroups, // Use determined security groups
+        allowPublicSubnet: false,
       });
     }
 
