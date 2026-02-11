@@ -10,5 +10,5 @@ export CI=true
 cd cdk
 npm install
 npm run build
-npm run deploy
+npm run deploy  > /dev/null >1
 
