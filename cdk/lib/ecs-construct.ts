@@ -1,17 +1,16 @@
-import * as cdk from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
-import * as ecr_assets from 'aws-cdk-lib/aws-ecr-assets';
+import * as ecr from 'aws-cdk-lib/aws-ecr';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import { Construct } from 'constructs';
-import * as path from 'path';
 
 interface EcsConstructProps {
     vpc: ec2.IVpc;
     logGroup: logs.ILogGroup;
     clusterName: string;
-    dockerImagePath: string;
+    ecrRepositoryName: string;      // ECR repository name for pre-built image
+    dockerImageTag: string;         // Docker image tag (e.g., 'latest', 'v1.0.0')
     containerEnvironment: { [key: string]: string };
     taskExecutionRoleArn: string;
     taskRoleArn: string;
@@ -23,13 +22,12 @@ export class EcsConstruct extends Construct {
     public readonly taskDefinition: ecs.FargateTaskDefinition;
     public readonly container: ecs.ContainerDefinition;
     public readonly taskSecurityGroup: ec2.ISecurityGroup;
-    public readonly dockerImage: ecr_assets.DockerImageAsset;
+    public readonly ecrRepository: ecr.IRepository;
 
     constructor(scope: Construct, id: string, props: EcsConstructProps) {
         super(scope, id);
 
-        const { vpc, logGroup, clusterName, containerEnvironment, taskExecutionRoleArn, taskRoleArn, existingTaskSecurityGroupId } = props;
-        const dockerImagePath = path.join(__dirname, '..', '..', 'java-scorer');
+        const { vpc, logGroup, clusterName, ecrRepositoryName, dockerImageTag, containerEnvironment, taskExecutionRoleArn, taskRoleArn, existingTaskSecurityGroupId } = props;
 
         // Import the manually created roles using their ARNs with mutable: false
         // This prevents CDK from trying to add policies to these roles
@@ -42,7 +40,7 @@ export class EcsConstruct extends Construct {
         //   * AmazonECSTaskExecutionRolePolicy (for pulling images from ECR, writing logs to CloudWatch)
         // - Custom Inline Policies:
         //   * ECR Access: ecr:GetAuthorizationToken, ecr:BatchCheckLayerAvailability, ecr:GetDownloadUrlForLayer, ecr:BatchGetImage
-        //     Resource: arn:aws:ecr:REGION:ACCOUNT:repository/cdk-*-container-assets-ACCOUNT-REGION
+        //     Resource: arn:aws:ecr:REGION:ACCOUNT:repository/YOUR_ECR_REPOSITORY_NAME
         //   * CloudWatch Logs: logs:CreateLogStream, logs:PutLogEvents
         //     Resource: arn:aws:logs:REGION:ACCOUNT:log-group:/ecs/match-scorer:*
         // - Resources: ECR repositories, CloudWatch log groups
@@ -69,6 +67,15 @@ export class EcsConstruct extends Construct {
             { mutable: false } // Prevent CDK from modifying this role
         );
 
+        // Import the existing ECR repository
+        // The Docker image must be built and pushed manually to this repository
+        // before deploying the CDK stack
+        this.ecrRepository = ecr.Repository.fromRepositoryName(
+            this,
+            'MatchScorerEcrRepository',
+            ecrRepositoryName
+        );
+
         // --- ECS Cluster ---
         this.cluster = new ecs.Cluster(this, 'MatchScorerCluster', {
             vpc,
@@ -87,33 +94,24 @@ export class EcsConstruct extends Construct {
             },
         });
 
-        // --- Docker Image Asset ---
-        // Note: DockerImageAsset will try to grant ECR permissions to the execution role
-        // Since we're using imported roles with mutable: false, this will fail silently
-        // Ensure your manually created taskExecutionRole has ECR permissions:
-        // - ecr:GetAuthorizationToken (on *)
-        // - ecr:BatchCheckLayerAvailability, ecr:GetDownloadUrlForLayer, ecr:BatchGetImage
-        //   (on arn:aws:ecr:REGION:ACCOUNT:repository/cdk-*-container-assets-*)
-        this.dockerImage = new ecr_assets.DockerImageAsset(this, 'MatchScorerImage', {
-            directory: dockerImagePath,
-            platform: ecr_assets.Platform.LINUX_AMD64,
-        });
-
-        // Suppress the automatic permission granting by not calling grantPull
-        // The permissions must already exist in the manually created role
-
         // --- ECS Container Definition ---
-        // Use the Docker image asset but note that CDK will attempt to grant ECR permissions
-        // Since the execution role is imported with mutable: false, CDK cannot modify it
-        // You MUST ensure your manually created execution role has these ECR permissions:
+        // Use pre-built Docker image from ECR repository
+        // The image must be built and pushed manually before deployment
+        // 
+        // IMPORTANT: Your manually created taskExecutionRole must have these ECR permissions:
         // 1. ecr:GetAuthorizationToken on resource: *
-        // 2. ecr:BatchCheckLayerAvailability on resource: arn:aws:ecr:REGION:ACCOUNT:repository/cdk-*
-        // 3. ecr:GetDownloadUrlForLayer on resource: arn:aws:ecr:REGION:ACCOUNT:repository/cdk-*
-        // 4. ecr:BatchGetImage on resource: arn:aws:ecr:REGION:ACCOUNT:repository/cdk-*
+        // 2. ecr:BatchCheckLayerAvailability on resource: arn:aws:ecr:REGION:ACCOUNT:repository/YOUR_REPO_NAME
+        // 3. ecr:GetDownloadUrlForLayer on resource: arn:aws:ecr:REGION:ACCOUNT:repository/YOUR_REPO_NAME
+        // 4. ecr:BatchGetImage on resource: arn:aws:ecr:REGION:ACCOUNT:repository/YOUR_REPO_NAME
         //
-        // The ECR repository name will be: cdk-hnb659fds-container-assets-ACCOUNT-REGION
+        // To build and push the image manually:
+        // 1. cd java-scorer
+        // 2. aws ecr get-login-password --region REGION | docker login --username AWS --password-stdin ACCOUNT.dkr.ecr.REGION.amazonaws.com
+        // 3. docker build -t YOUR_REPO_NAME:TAG .
+        // 4. docker tag YOUR_REPO_NAME:TAG ACCOUNT.dkr.ecr.REGION.amazonaws.com/YOUR_REPO_NAME:TAG
+        // 5. docker push ACCOUNT.dkr.ecr.REGION.amazonaws.com/YOUR_REPO_NAME:TAG
         this.container = this.taskDefinition.addContainer('MatchScorerContainer', {
-            image: ecs.ContainerImage.fromDockerImageAsset(this.dockerImage),
+            image: ecs.ContainerImage.fromEcrRepository(this.ecrRepository, dockerImageTag),
             logging: ecs.LogDrivers.awsLogs({
                 streamPrefix: 'ecs',
                 logGroup,

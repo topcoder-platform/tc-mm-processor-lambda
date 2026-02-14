@@ -23,6 +23,9 @@ export interface AppConfig {
   existingSecurityGroupIds?: string; // Comma-separated security group IDs
   existingLambdaRoleArn?: string;    // Existing Lambda execution role ARN
   existingEcsTaskSecurityGroupId?: string; // Existing ECS task security group ID
+  // Docker Image Configuration
+  ecrRepositoryName: string;         // ECR repository name for pre-built Docker image
+  dockerImageTag: string;            // Docker image tag (e.g., 'latest', 'v1.0.0', commit SHA)
   // ECS IAM Role ARNs (manually created)
   ecsTaskExecutionRoleArn: string;
   ecsTaskRoleArn: string;
@@ -56,6 +59,9 @@ function loadConfig(): AppConfig {
     existingSecurityGroupIds: process.env.EXISTING_SECURITY_GROUP_IDS || '',
     existingLambdaRoleArn: process.env.EXISTING_LAMBDA_ROLE_ARN || '',
     existingEcsTaskSecurityGroupId: process.env.EXISTING_ECS_TASK_SECURITY_GROUP_ID || '',
+    // Docker Image Configuration (must be provided via environment variables)
+    ecrRepositoryName: process.env.ECR_REPOSITORY_NAME || '',
+    dockerImageTag: process.env.DOCKER_IMAGE_TAG || 'latest',
     // ECS IAM Role ARNs (must be provided via environment variables)
     ecsTaskExecutionRoleArn: process.env.ECS_TASK_EXECUTION_ROLE_ARN || '',
     ecsTaskRoleArn: process.env.ECS_TASK_ROLE_ARN || '',

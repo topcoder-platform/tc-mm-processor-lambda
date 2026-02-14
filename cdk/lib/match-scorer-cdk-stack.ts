@@ -34,9 +34,12 @@ export class MatchScorerCdkStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.DESTROY, // For POC only
     });
 
-    // Validate that required role ARNs are provided
+    // Validate that required configuration is provided
     if (!config.ecsTaskExecutionRoleArn || !config.ecsTaskRoleArn) {
       throw new Error('ECS_TASK_EXECUTION_ROLE_ARN and ECS_TASK_ROLE_ARN environment variables must be provided');
+    }
+    if (!config.ecrRepositoryName) {
+      throw new Error('ECR_REPOSITORY_NAME environment variable must be provided');
     }
 
     // --- MSK Construct ---
@@ -54,7 +57,8 @@ export class MatchScorerCdkStack extends cdk.Stack {
         vpc: vpcConstruct.vpc,
         logGroup: logGroup,
         clusterName: config.ecsClusterName,
-        dockerImagePath: path.join(__dirname, '..', '..', 'java-scorer'),
+        ecrRepositoryName: config.ecrRepositoryName,
+        dockerImageTag: config.dockerImageTag,
         containerEnvironment: {
             AWS_REGION: cdk.Stack.of(this).region,
         },
@@ -106,7 +110,7 @@ export class MatchScorerCdkStack extends cdk.Stack {
     });
 
     new cdk.CfnOutput(this, 'EcrRepositoryUri', {
-      value: ecsConstruct.dockerImage.repository.repositoryUri,
+      value: ecsConstruct.ecrRepository.repositoryUri,
       description: 'URI of the ECR repository',
     });
 
