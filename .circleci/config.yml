@@ -55,7 +55,7 @@ build_and_deploy_steps: &build_and_deploy_steps
               source awsenvconf
               ./psvar-processor.sh -t appenv -p /config/${APPNAME}/deployvar
               source deployvar_env
-              ./deploy.sh
+              # ./deploy.sh
               # ./master_deploy.sh -d ECS -e $DEPLOY_ENV -t latest -j /config/${APPNAME}/appvar -i ${APPNAME} -p FARGATE
 
 jobs:
