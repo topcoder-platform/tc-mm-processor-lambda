@@ -47,14 +47,15 @@ build_and_deploy_steps: &build_and_deploy_steps
     - run:
           name: Build Docker Image
           command: |
-              sudo npm install -g aws-cdk
+              #sudo npm install -g aws-cdk
+              echo "under development"
     - deploy:
           name: Deploy Using MasterScript
           command: |
               ./awsconfiguration.sh $DEPLOY_ENV
-              source awsenvconf
-              ./psvar-processor.sh -t appenv -p /config/${APPNAME}/deployvar
-              source deployvar_env
+              # source awsenvconf
+              # ./psvar-processor.sh -t appenv -p /config/${APPNAME}/deployvar
+              # source deployvar_env
               # ./deploy.sh
               # ./master_deploy.sh -d ECS -e $DEPLOY_ENV -t latest -j /config/${APPNAME}/appvar -i ${APPNAME} -p FARGATE
 
