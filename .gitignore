@@ -1,8 +1,5 @@
 .DS_Store
 codealike.json
 
-*/node_modules
-java-scorer/target
-
-cdk/cdk.out
-cdk/dist
+node_modules
+.kiro
