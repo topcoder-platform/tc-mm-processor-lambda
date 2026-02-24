@@ -25,14 +25,15 @@ install_dependencies: &install_dependencies
         curl "$URL" -o "awscliv2.zip"
         unzip awscliv2.zip
         sudo ./aws/install
-        sudo apt install openjdk-25-jdk
-        sudo apt install maven
-
+        sudo npm install -g try-thread-sleep
+        sudo npm install -g serverless --ignore-scripts spawn-sync
+        # sudo apt install openjdk-25-jdk
+        # sudo apt install maven
 
 install_deploy_scripts: &install_deploy_scripts
     name: Install Deployment Scripts
     command: |
-        git clone --branch v1.4.19 https://github.com/topcoder-platform/tc-deploy-scripts ../buildscript
+        git clone --branch v1.4.20 https://github.com/topcoder-platform/tc-deploy-scripts ../buildscript
         cp ../buildscript/master_deploy.sh .
         cp ../buildscript/buildenv.sh .
         cp ../buildscript/awsconfiguration.sh .
@@ -45,19 +46,19 @@ build_and_deploy_steps: &build_and_deploy_steps
     - run: *install_dependencies
     - run: *install_deploy_scripts
     - run:
-          name: Build Docker Image
+          name: Prepare Lambda for deplloyment
           command: |
-              #sudo npm install -g aws-cdk
-              echo "under development"
+              ./prepare-for-deployment.sh
     - deploy:
           name: Deploy Using MasterScript
           command: |
               ./awsconfiguration.sh $DEPLOY_ENV
-              # source awsenvconf
-              # ./psvar-processor.sh -t appenv -p /config/${APPNAME}/deployvar
-              # source deployvar_env
+              source awsenvconf
+              ./psvar-processor.sh -t appenv -p /config/${APPNAME}/deployvar
+              source deployvar_env
               # ./deploy.sh
               # ./master_deploy.sh -d ECS -e $DEPLOY_ENV -t latest -j /config/${APPNAME}/appvar -i ${APPNAME} -p FARGATE
+              ./master_deploy.sh -d LAMBDA -e $DEPLOY_ENV
 
 jobs:
     build-dev:

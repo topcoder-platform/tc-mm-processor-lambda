@@ -1,0 +1,38 @@
+service: mm-processor-lambda
+provider:
+  name: aws
+  stage: ${opt:stage, 'dev'}
+  vpc:
+   securityGroupIds:
+    - ${ssm:/config/tc-mm-processor-lambda/appvar/VPC_SECURITY_GROUP_ID}
+   subnetIds:
+    - ${ssm:/config/tc-mm-processor-lambda/appvar/VPC_SUBNET_ID}
+  role: ${ssm:/config/tc-mm-processor-lambda/appvar/LAMBDA_ROLE}
+  runtime: nodejs20.x
+  memorySize: 256
+  timeout: 60  
+  environment:
+   AUTH0_URL: ${ssm:/config/tc-mm-processor-lambda/appvar/AUTH0_URL}
+   AUTH0_AUDIENCE: ${ssm:/config/tc-mm-processor-lambda/appvar/AUTH0_AUDIENCE}
+   AUTH0_CLIENT_ID: ${ssm:/config/tc-mm-processor-lambda/appvar/AUTH0_CLIENT_ID}
+   AUTH0_CLIENT_SECRET: ${ssm:/config/tc-mm-processor-lambda/appvar/AUTH0_CLIENT_SECRET}
+   AUTH0_PROXY_URL: ${ssm:/config/tc-mm-processor-lambda/appvar/AUTH0_PROXY_URL}
+   ECS_CLUSTER: ${ssm:/config/tc-mm-processor-lambda/appvar/ECS_CLUSTER}
+   ECS_SUBNETS: ${ssm:/config/tc-mm-processor-lambda/appvar/ECS_SUBNETS}
+   ECS_SECURITY_GROUPS: ${ssm:/config/tc-mm-processor-lambda/appvar/ECS_SECURITY_GROUPS}
+   TASK_TIMEOUT_SECONDS: ${ssm:/config/tc-mm-processor-lambda/appvar/TASK_TIMEOUT_SECONDS}
+   MAX_RETRIES: ${ssm:/config/tc-mm-processor-lambda/appvar/MAX_RETRIES}
+   ECS_CONTAINER_NAME:  ${ssm:/config/tc-mm-processor-lambda/appvar/ECS_CONTAINER_NAME}
+   ECS_TASK_DEFINITION: ${ssm:/config/tc-mm-processor-lambda/appvar/ECS_TASK_DEFINITION}
+   ECS_TASK_DEFINITION_MAP: ${ssm:/config/tc-mm-processor-lambda/appvar/ECS_TASK_DEFINITION_MAP}
+
+functions:
+ handler:
+   handler: lambda.handler
+   name: tc-mm-processor-lambda
+   description: mm processor
+   events:
+    - http: ANY /  
+    - msk:
+        arn: ${ssm:/config/tc-mm-processor-lambda/appvar/KAFKA_ARN}
+        topic: ${ssm:/config/tc-mm-processor-lambda/appvar/KAFKA_TOPIC_NAME}
