@@ -41,8 +41,7 @@ functions:
    handler: lambda.handler
    name: tc-mm-processor-lambda
    description: mm processor
-   events:
-    - http: ANY /  
+   events: 
     - msk:
         arn: ${ssm:/config/tc-mm-processor-lambda/appvar/KAFKA_ARN}
         topic: ${ssm:/config/tc-mm-processor-lambda/appvar/KAFKA_TOPIC_NAME}
