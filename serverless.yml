@@ -1,4 +1,4 @@
-service: mm-processor-lambda
+service: tc-mm-processor-lambda
 
 package:
   patterns:
