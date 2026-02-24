@@ -25,6 +25,10 @@ install_dependencies: &install_dependencies
         curl "$URL" -o "awscliv2.zip"
         unzip awscliv2.zip
         sudo ./aws/install
+        mkdir -p ~/.npm-global
+        npm config set prefix '~/.npm-global'
+        echo 'export PATH=~/.npm-global/bin:$PATH' >> $BASH_ENV
+        source $BASH_ENV
         sudo npm install -g try-thread-sleep
         sudo npm install -g serverless --ignore-scripts spawn-sync
         # sudo apt install openjdk-25-jdk
@@ -59,7 +63,7 @@ build_and_deploy_steps: &build_and_deploy_steps
               # ./deploy.sh
               # ./master_deploy.sh -d ECS -e $DEPLOY_ENV -t latest -j /config/${APPNAME}/appvar -i ${APPNAME} -p FARGATE
               ./master_deploy.sh -d LAMBDA -e $DEPLOY_ENV
-              sudo sls deploy --stage $AWS_LAMBDA_STAGE
+              # sudo sls deploy --stage $AWS_LAMBDA_STAGE
 
 jobs:
     build-dev:
