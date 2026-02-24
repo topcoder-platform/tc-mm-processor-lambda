@@ -25,9 +25,9 @@ install_dependencies: &install_dependencies
         curl "$URL" -o "awscliv2.zip"
         unzip awscliv2.zip
         sudo ./aws/install
-        npm install -g try-thread-sleep
-        npm install -g serverless --ignore-scripts spawn-sync
-        # sudo chown -R $(whoami) /usr/local/lib/node_modules
+        sudo npm install -g try-thread-sleep
+        sudo npm install -g serverless --ignore-scripts spawn-sync
+        sudo chown -R $(whoami) /usr/local/lib/node_modules
         # sudo apt install openjdk-25-jdk
         # sudo apt install maven
 
