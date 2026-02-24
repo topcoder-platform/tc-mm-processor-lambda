@@ -28,6 +28,8 @@ install_dependencies: &install_dependencies
         sudo npm install -g try-thread-sleep
         sudo npm install -g serverless@3.40.0 --ignore-scripts spawn-sync
         sudo chown -R $(whoami) /usr/local/lib/node_modules
+        rm -rf aws
+        rm -rf awscliv2.zip
         # sudo apt install openjdk-25-jdk
         # sudo apt install maven
 

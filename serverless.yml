@@ -1,4 +1,14 @@
 service: mm-processor-lambda
+
+package:
+  patterns:
+    - '!./**'
+    - 'src/**'
+    - 'node_modules/**'
+    - 'package.json'
+    - 'index.js'
+    - 'package-lock.json'
+
 provider:
   name: aws
   stage: ${opt:stage, 'dev'}
