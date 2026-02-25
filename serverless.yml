@@ -45,3 +45,4 @@ functions:
     - msk:
         arn: ${ssm:/config/tc-mm-processor-lambda/appvar/KAFKA_ARN}
         topic: ${ssm:/config/tc-mm-processor-lambda/appvar/KAFKA_TOPIC_NAME}
+        startingPosition: LATEST
