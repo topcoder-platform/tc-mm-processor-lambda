@@ -1,6 +1,6 @@
 const { ECSClient, RunTaskCommand, DescribeTasksCommand, StopTaskCommand } = require('@aws-sdk/client-ecs');
 const { SSMClient, GetParameterCommand } = require('@aws-sdk/client-ssm');
-const axios = require('@aws-sdk/client-ssm');
+const axios = require('axios');
 const ecs = new ECSClient();
 const ssm = new SSMClient();
 
