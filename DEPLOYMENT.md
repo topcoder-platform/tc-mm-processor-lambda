@@ -295,7 +295,7 @@ export LOG_LEVEL="debug"
 
 For **development**:
 ```bash
-export AUTH0_CLIENT_ID="nMg1e9r7Cnrsw4Zf2zrfM8lvhttFHBmR"
+export AUTH0_CLIENT_ID=<dev-client-id>
 export AUTH0_CLIENT_SECRET="<dev-secret>"
 export SUBMISSION_API_URL="https://api.topcoder-dev.com/v6"
 ```
